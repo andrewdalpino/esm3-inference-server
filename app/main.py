@@ -9,10 +9,13 @@ from routers import esm3_model, health
 
 from model import ESM3Model
 
+from huggingface_hub import login as hf_login
+
 import uvicorn
 
 
 api_token = environ.get("API_TOKEN", "")
+hf_token = environ.get("HF_TOKEN", "")
 model_name = environ.get("MODEL_NAME", "esm3-open")
 context_length = int(environ.get("CONTEXT_LENGTH", 2048))
 device = environ.get("DEVICE", "cpu")
@@ -22,6 +25,9 @@ app = FastAPI(
     description="ESM3 inference server for protein sequence prediction.",
     version="0.0.1",
 )
+
+# The ESM3 model requires a license agreement.
+hf_login(token=hf_token)
 
 model = ESM3Model(
     model_name=model_name,

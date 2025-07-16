@@ -52,6 +52,7 @@ async def sequence_to_sequence(
 
     return SequenceToSequenceResponse(sequence=protein.sequence)
 
+
 @router.post("/sequence-to-structure", response_model=SequenceToStructureResponse)
 async def sequence_to_structure(
     request: Request, input: SequenceToStructureRequest

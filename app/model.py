@@ -3,8 +3,6 @@ import torch
 from esm.models.esm3 import ESM3
 from esm.sdk.api import ESMProtein, GenerationConfig
 
-from huggingface_hub import login as hf_login
-
 
 class ESM3Model:
     AVAILABLE_MODELS = {"esm3-open"}
@@ -18,9 +16,6 @@ class ESM3Model:
 
         if context_length <= 0:
             raise ValueError("Context length must be greater than 0.")
-
-        # The ESM3 model requires a license agreement.
-        hf_login()
 
         model = ESM3.from_pretrained(model_name, device=torch.device(device))
 
