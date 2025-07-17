@@ -22,7 +22,7 @@ class ExceptionHandler(BaseHTTPMiddleware):
                 content={"message": e.detail}, status_code=e.status_code
             )
         except Exception as e:
-            logging.error(f"Server error: {e}")
+            logging.error(f"Uncaught exception: {e}")
 
             return JSONResponse(
                 content={"message": "Something went wrong."}, status_code=500
@@ -34,6 +34,9 @@ class TokenAuthentication(BaseHTTPMiddleware):
 
     def __init__(self, app, api_token: str):
         super().__init__(app)
+
+        if not api_token:
+            raise ValueError("API token must be provided.")
 
         self.api_token = api_token
 

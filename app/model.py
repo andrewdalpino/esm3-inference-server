@@ -7,32 +7,29 @@ from esm.sdk.api import ESMProtein, GenerationConfig
 class ESM3Model:
     AVAILABLE_MODELS = {"esm3-open"}
 
-    def __init__(self, model_name: str, context_length: int, device: str):
+    def __init__(self, model_name: str, device: str):
         if model_name not in self.AVAILABLE_MODELS:
             raise ValueError(
                 f"Model {model_name} is not available. "
                 f"Available models: {self.AVAILABLE_MODELS}"
             )
 
-        if context_length <= 0:
-            raise ValueError("Context length must be greater than 0.")
-
         model = ESM3.from_pretrained(model_name, device=torch.device(device))
 
         model.eval()
 
         self.model = model
-        self.context_length = context_length
         self.device = device
 
     @torch.no_grad()
     def sequence_to_sequence(
         self, sequence: str, num_steps: int, temperature: float
     ) -> ESMProtein:
-        if len(sequence) > self.context_length:
-            raise ValueError(
-                f"Sequence length {len(sequence)} exceeds context length {self.context_length}."
-            )
+        if len(sequence) == 0:
+            raise ValueError("Sequence must not be empty.")
+
+        if num_steps < 1:
+            raise ValueError("num_steps must be at least 1.")
 
         protein = ESMProtein(sequence=sequence)
 
@@ -46,10 +43,11 @@ class ESM3Model:
 
     @torch.no_grad()
     def sequence_to_structure(self, sequence: str, num_steps: int) -> ESMProtein:
-        if len(sequence) > self.context_length:
-            raise ValueError(
-                f"Sequence length {len(sequence)} exceeds context length {self.context_length}."
-            )
+        if len(sequence) == 0:
+            raise ValueError("Sequence must not be empty.")
+
+        if num_steps < 1:
+            raise ValueError("num_steps must be at least 1.")
 
         protein = ESMProtein(sequence=sequence)
 
