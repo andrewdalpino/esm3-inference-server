@@ -1,5 +1,7 @@
 import torch
 
+from torchao.quantization import Int8WeightOnlyConfig, quantize_
+
 from esm.models.esm3 import ESM3
 from esm.sdk.api import ESMProtein, GenerationConfig
 
@@ -7,7 +9,7 @@ from esm.sdk.api import ESMProtein, GenerationConfig
 class ESM3Model:
     AVAILABLE_MODELS = {"esm3-open"}
 
-    def __init__(self, model_name: str, device: str):
+    def __init__(self, model_name: str, quantize: bool, device: str):
         if model_name not in self.AVAILABLE_MODELS:
             raise ValueError(
                 f"Model {model_name} is not available. "
@@ -15,6 +17,9 @@ class ESM3Model:
             )
 
         model = ESM3.from_pretrained(model_name, device=torch.device(device))
+
+        if quantize:
+            quantize_(model, Int8WeightOnlyConfig())
 
         model.eval()
 
