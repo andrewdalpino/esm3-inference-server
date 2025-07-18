@@ -18,6 +18,8 @@ class ESM3Model:
 
         model = ESM3.from_pretrained(model_name, device=torch.device(device))
 
+        model = torch.compile(model)
+
         if quantize:
             quantize_(model, Int8WeightOnlyConfig())
 
