@@ -16,12 +16,14 @@ class ESM3Model:
                 f"Available models: {self.AVAILABLE_MODELS}"
             )
 
-        model = ESM3.from_pretrained(model_name, device=torch.device(device))
+        model = ESM3.from_pretrained(model_name, device=torch.device("cpu"))
 
         model = torch.compile(model)
 
         if quantize:
             quantize_(model, Int8WeightOnlyConfig())
+
+        model = model.to(device)
 
         model.eval()
 
