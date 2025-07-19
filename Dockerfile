@@ -17,8 +17,9 @@ VOLUME "/root/.cache/huggingface"
 
 EXPOSE 8000
 
-HEALTHCHECK --interval=60s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -H "Authorization: Bearer $API_KEY" -f http://localhost:8000/health || exit 1
-
+HEALTHCHECK --interval=60s --start-period=60s \
+    CMD curl -H "Authorization: Bearer $API_TOKEN" -f http://localhost:8000/health \
+    || exit 1
+    
 # Command to run the application
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
