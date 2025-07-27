@@ -23,7 +23,7 @@ device = environ.get("DEVICE", "cpu")
 app = FastAPI(
     title="ESM3 Inference Server",
     description="ESM3 inference server for protein sequence prediction.",
-    version="0.0.6",
+    version="0.0.7",
 )
 
 # The ESM3 model requires a license agreement.
