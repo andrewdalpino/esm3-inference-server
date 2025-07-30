@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, Any
 
 from pydantic import BaseModel, Field
 
@@ -24,7 +24,7 @@ class GenerationRequest(BaseModel):
         default=None,
     )
 
-    function_annotations: list[str] | None = Field(
+    function_annotations: list[dict[str, Any]] | None = Field(
         description="InterPro function annotations for the sequence.",
         default=None,
     )
@@ -70,7 +70,7 @@ class GenerationResponse(BaseModel):
         default=None,
     )
 
-    function_annotations: list[str] | None = Field(
+    function_annotations: list[dict[str, Any]] | None = Field(
         description="InterPro function annotations for the sequence.",
         default=None,
     )
@@ -124,7 +124,14 @@ async def sequence_to_sequence(
     protein = request.app.state.model.generate(protein, config)
 
     function_annotations = (
-        [annotation.label for annotation in protein.function_annotations]
+        [
+            {
+                "label": annotation.label,
+                "start": annotation.start,
+                "end": annotation.end,
+            }
+            for annotation in protein.function_annotations
+        ]
         if protein.function_annotations
         else None
     )
