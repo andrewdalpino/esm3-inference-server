@@ -23,7 +23,7 @@ device = environ.get("DEVICE", "cpu")
 
 app = FastAPI(
     title="ESM3 Inference Server",
-    description="ESM3 inference server for protein sequence generation.",
+    description="ESM3 evolutionary protein modelling inference server.",
     version="0.0.8",
 )
 

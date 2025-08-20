@@ -72,7 +72,7 @@ class GenerationResponse(BaseModel):
 
     function_annotations: list[dict[str, Any]] | None = Field(
         description="InterPro function annotations for the sequence.",
-        default=None,
+        default=[],
     )
 
     pdb: str | None = Field(
@@ -98,14 +98,12 @@ router = APIRouter(prefix="/model")
 async def sequence_to_sequence(
     request: Request, input: GenerationRequest
 ) -> GenerationResponse:
-    function_annotations = (
-        [
-            FunctionAnnotation(label=annotation)
-            for annotation in input.function_annotations
-        ]
-        if input.function_annotations
-        else None
-    )
+    function_annotations = [
+        FunctionAnnotation(
+            label=annotation.label, start=annotation.start, end=annotation.end
+        )
+        for annotation in input.function_annotations
+    ]
 
     protein = ESMProtein(
         sequence=input.sequence,
