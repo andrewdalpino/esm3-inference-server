@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from middleware import ExceptionHandler, TokenAuthentication, ResponseTime
 
-from routers import esm3_model, health
+from routers import esm3_generate, health
 
 from model import ESM3Model
 
@@ -47,7 +47,7 @@ app.add_middleware(
 if api_token:
     app.add_middleware(TokenAuthentication, api_token=api_token)
 
-app.include_router(esm3_model.router)
+app.include_router(esm3_generate.router)
 app.include_router(health.router)
 
 app.add_middleware(ResponseTime)

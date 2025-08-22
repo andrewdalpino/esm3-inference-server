@@ -24,9 +24,7 @@ class ExceptionHandler(BaseHTTPMiddleware):
         except Exception as e:
             logging.error(f"Uncaught exception: {e}")
 
-            return JSONResponse(
-                content={"message": "Something went wrong."}, status_code=500
-            )
+            return JSONResponse(content={"message": f"{e}"}, status_code=500)
 
 
 class TokenAuthentication(BaseHTTPMiddleware):
