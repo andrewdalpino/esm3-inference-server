@@ -47,10 +47,10 @@ app.add_middleware(
 if api_token:
     app.add_middleware(TokenAuthentication, api_token=api_token)
 
+app.add_middleware(ResponseTime)
+
 app.include_router(esm3_generate.router)
 app.include_router(health.router)
-
-app.add_middleware(ResponseTime)
 
 
 if __name__ == "__main__":
