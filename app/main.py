@@ -17,8 +17,8 @@ import uvicorn
 hf_token = environ.get("HF_TOKEN", "")
 api_token = environ.get("API_TOKEN", "")
 model_name = environ.get("MODEL_NAME", "esm3-open")
-quantize = environ.get("QUANTIZE", "true").lower() == "true"
-quant_group_size = int(environ.get("QUANT_GROUP_SIZE", 16))
+quantize = environ.get("QUANTIZE", "false").lower() == "true"
+quant_group_size = int(environ.get("QUANT_GROUP_SIZE", 8))
 device = environ.get("DEVICE", "cpu")
 
 app = FastAPI(
