@@ -3,7 +3,7 @@ from os import environ
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import esm3_model
+from routers import esm3_model
 from middleware import ExceptionHandler, TokenAuthentication, ResponseTime
 
 from routers import health
