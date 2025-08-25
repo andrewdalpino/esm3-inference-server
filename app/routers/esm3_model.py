@@ -69,6 +69,16 @@ class GenerateSASARequest(GenerateRequest):
     pass
 
 
+class ModelInfoResponse(BaseModel):
+    model_name: str = Field(
+        description="The name of the ESM3 model.",
+    )
+
+    device: str = Field(
+        description="The device the model is running on.",
+    )
+
+
 class GenerateSequenceResponse(BaseModel):
     sequence: str = Field(
         description="An amino acid protein sequence.",
@@ -110,6 +120,16 @@ class GenerateSASAResponse(BaseModel):
 
 
 router = APIRouter(prefix="/model")
+
+
+@router.get("/", response_model=ModelInfoResponse)
+async def model_info(request: Request) -> ModelInfoResponse:
+    model = request.app.state.model
+
+    return ModelInfoResponse(
+        model_name=model.name,
+        device=model.device,
+    )
 
 
 @router.post("/generate/sequence", response_model=GenerateSequenceResponse)
