@@ -1,3 +1,7 @@
+# 0.0.10
+
+- Preload the model heads so full model can be quantized.
+
 # 0.0.9
 
 - Removed group quantization.

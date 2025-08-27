@@ -74,6 +74,10 @@ class ModelInfoResponse(BaseModel):
         description="The name of the ESM3 model.",
     )
 
+    num_parameters: int = Field(
+        description="The number of parameters in the model.",
+    )
+
     device: str = Field(
         description="The device the model is running on.",
     )
@@ -128,6 +132,7 @@ async def model_info(request: Request) -> ModelInfoResponse:
 
     return ModelInfoResponse(
         model_name=model.name,
+        num_parameters=model.num_parameters,
         device=model.device,
     )
 

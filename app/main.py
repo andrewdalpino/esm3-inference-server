@@ -18,13 +18,13 @@ import uvicorn
 hf_token = environ.get("HF_TOKEN", "")
 api_token = environ.get("API_TOKEN", "")
 model_name = environ.get("MODEL_NAME", "esm3-open")
-quantize = environ.get("QUANTIZE", "false").lower() == "true"
+quantize = environ.get("QUANTIZE", "true").lower() == "true"
 device = environ.get("DEVICE", "cpu")
 
 app = FastAPI(
     title="ESM3 Inference Server",
     description="ESM3 evolutionary protein modelling inference server.",
-    version="0.0.9",
+    version="0.0.10",
 )
 
 # The ESM3 model requires a license agreement.
