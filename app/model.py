@@ -35,12 +35,12 @@ class ESM3Model:
         model.get_structure_decoder()
         model.get_function_decoder()
 
-        model = model.to(device)
-
         model = torch.compile(model)
 
         if quantize:
             quantize_(model, Int8WeightOnlyConfig())
+
+        model = model.to(device)
 
         model.eval()
 
