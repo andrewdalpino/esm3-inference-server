@@ -1,13 +1,17 @@
+from warnings import warn
 from types import MethodType
 
 import torch
 
 from torch.cuda import is_available as cuda_is_available
+from torch.nn import Module
 
 from torchao.quantization import Int8WeightOnlyConfig, quantize_
 
 from esm.models.esm3 import ESM3
 from esm.sdk.api import ESMProtein, GenerationConfig
+from esm.models.vqvae import StructureTokenDecoder, StructureTokenEncoder
+from esm.models.function_decoder import FunctionTokenDecoder
 
 
 class ESM3Model:
@@ -19,6 +23,7 @@ class ESM3Model:
             name (str): The name of the pretrained ESM3 model to load.
             quantize (bool): Whether to quantize the model weights to int8.
             device (str): The device to load the model on.
+            cpu_offloading (bool): Whether to offload parts of the model to CPU when not in use.
         """
 
         if name not in self.AVAILABLE_MODELS:
@@ -30,12 +35,17 @@ class ESM3Model:
         if "cuda" in device and not cuda_is_available():
             raise ValueError("CUDA is not supported on this device.")
 
+        if "cpu" in device and cpu_offloading:
+            warn("CPU offloading is not supported on CPU device.")
+
+            cpu_offloading = False
+
         model = ESM3.from_pretrained(name, device=torch.device("cpu"))
 
         # Preload additional encoder/decoder networks.
-        structure_encoder = model.get_structure_encoder()
-        structure_decoder = model.get_structure_decoder()
-        function_decoder = model.get_function_decoder()
+        model.get_structure_encoder()
+        model.get_structure_decoder()
+        model.get_function_decoder()
 
         model = torch.compile(model)
 
@@ -46,9 +56,18 @@ class ESM3Model:
             model.encoder = model.encoder.to(device)
             model.transformer = model.transformer.to(device)
             model.output_heads = model.output_heads.to(device)
+
+            def pin_module(module: Module):
+                for parameter in module.parameters():
+                    parameter.pin_memory()
+
+            pin_module(model._structure_encoder)
+            pin_module(model._structure_decoder)
+            pin_module(model._function_decoder)
         else:
             model = model.to(device)
 
+        # Replace encoder/decoder getters to support CPU offloading.
         model.get_structure_encoder = MethodType(self.get_structure_encoder, model)
         model.get_structure_decoder = MethodType(self.get_structure_decoder, model)
         model.get_function_decoder = MethodType(self.get_function_decoder, model)
@@ -58,11 +77,6 @@ class ESM3Model:
         self.name = name
         self.model = model
         self.device = device
-
-        self.structure_encoder = structure_encoder
-        self.structure_decoder = structure_decoder
-        self.function_decoder = function_decoder
-
         self.cpu_offloading = cpu_offloading
 
     @property
@@ -71,33 +85,56 @@ class ESM3Model:
 
         return sum(p.numel() for p in self.model.parameters())
 
-    def get_structure_encoder(self, esm3):
-        if self.cpu_offloading and "cpu" not in self.device:
-            self.structure_decoder = self.structure_decoder.to("cpu")
-            self.function_decoder = self.function_decoder.to("cpu")
+    def get_structure_encoder(self, model: ESM3) -> StructureTokenEncoder:
+        """Return the encoder section of the structure variational autoencoder."""
 
-            self.structure_encoder = self.structure_encoder.to(self.device)
+        if self.cpu_offloading:
+            model._structure_encoder = model._structure_encoder.to(
+                self.device, non_blocking=True
+            )
+            model._structure_decoder = model._structure_decoder.to(
+                "cpu", non_blocking=True
+            )
+            model._function_decoder = model._function_decoder.to(
+                "cpu", non_blocking=True
+            )
 
-        return self.structure_encoder
+        return model._structure_encoder
 
-    def get_structure_decoder(self, esm3):
-        if self.cpu_offloading and "cpu" not in self.device:
-            self.structure_encoder = self.structure_encoder.to("cpu")
-            self.function_decoder = self.function_decoder.to("cpu")
+    def get_structure_decoder(self, model: ESM3) -> StructureTokenDecoder:
+        """Return the decoder section of the structure variational autoencoder."""
 
-            self.structure_decoder = self.structure_decoder.to(self.device)
+        if self.cpu_offloading:
+            model._structure_encoder = model._structure_encoder.to(
+                "cpu", non_blocking=True
+            )
+            model._structure_decoder = model._structure_decoder.to(
+                self.device, non_blocking=True
+            )
+            model._function_decoder = model._function_decoder.to(
+                "cpu", non_blocking=True
+            )
 
-        return self.structure_decoder
+        return model._structure_decoder
 
-    def get_function_decoder(self, esm3):
-        if self.cpu_offloading and "cpu" not in self.device:
-            self.structure_encoder = self.structure_encoder.to("cpu")
-            self.structure_decoder = self.structure_decoder.to("cpu")
+    def get_function_decoder(self, model: ESM3) -> FunctionTokenDecoder:
+        """Return the function annotation decoder."""
 
-            self.function_decoder = self.function_decoder.to(self.device)
+        if self.cpu_offloading:
+            model._structure_encoder = model._structure_encoder.to(
+                "cpu", non_blocking=True
+            )
+            model._structure_decoder = model._structure_decoder.to(
+                "cpu", non_blocking=True
+            )
+            model._function_decoder = model._function_decoder.to(
+                self.device, non_blocking=True
+            )
 
-        return self.function_decoder
+        return model._function_decoder
 
     @torch.no_grad()
     def generate(self, protein: ESMProtein, config: GenerationConfig) -> ESMProtein:
+        """Generate tokens for the given protein and configuration."""
+
         return self.model.generate(protein, config)
