@@ -1,9 +1,9 @@
-from warnings import warn
 from types import MethodType
 
 import torch
 
 from torch.cuda import is_available as cuda_is_available
+from torch.backends.mps import is_available as mps_is_available
 from torch.nn import Module
 
 from torchao.quantization import Int8WeightOnlyConfig, quantize_
@@ -32,13 +32,14 @@ class ESM3Model:
                 f"Available models: {self.AVAILABLE_MODELS}"
             )
 
+        if "cpu" in device and cpu_offloading:
+            raise ValueError("CPU offloading cannot be used with CPU device.")
+
         if "cuda" in device and not cuda_is_available():
             raise ValueError("CUDA is not supported on this device.")
 
-        if "cpu" in device and cpu_offloading:
-            warn("CPU offloading is not supported on CPU device.")
-
-            cpu_offloading = False
+        if "mps" in device and not mps_is_available():
+            raise ValueError("MPS is not supported on this device.")
 
         model = ESM3.from_pretrained(name, device=torch.device("cpu"))
 
@@ -53,31 +54,32 @@ class ESM3Model:
             quantize_(model, Int8WeightOnlyConfig())
 
         if cpu_offloading:
-            model.encoder = model.encoder.to(device)
-            model.transformer = model.transformer.to(device)
-            model.output_heads = model.output_heads.to(device)
+            # Replace encoder/decoder getters to support CPU offloading.
+            model.get_structure_encoder = MethodType(self.get_structure_encoder, model)
+            model.get_structure_decoder = MethodType(self.get_structure_decoder, model)
+            model.get_function_decoder = MethodType(self.get_function_decoder, model)
 
             def pin_module(module: Module):
                 for parameter in module.parameters():
                     parameter.pin_memory()
 
+            # Pin additional networks for faster memory swaps.
             pin_module(model._structure_encoder)
             pin_module(model._structure_decoder)
             pin_module(model._function_decoder)
+
+            model.encoder = model.encoder.to(device)
+            model.transformer = model.transformer.to(device)
+            model.output_heads = model.output_heads.to(device)
+
         else:
             model = model.to(device)
-
-        # Replace encoder/decoder getters to support CPU offloading.
-        model.get_structure_encoder = MethodType(self.get_structure_encoder, model)
-        model.get_structure_decoder = MethodType(self.get_structure_decoder, model)
-        model.get_function_decoder = MethodType(self.get_function_decoder, model)
 
         model.eval()
 
         self.name = name
         self.model = model
         self.device = device
-        self.cpu_offloading = cpu_offloading
 
     @property
     def num_parameters(self) -> int:
@@ -88,48 +90,33 @@ class ESM3Model:
     def get_structure_encoder(self, model: ESM3) -> StructureTokenEncoder:
         """Return the encoder section of the structure variational autoencoder."""
 
-        if self.cpu_offloading:
-            model._structure_encoder = model._structure_encoder.to(
-                self.device, non_blocking=True
-            )
-            model._structure_decoder = model._structure_decoder.to(
-                "cpu", non_blocking=True
-            )
-            model._function_decoder = model._function_decoder.to(
-                "cpu", non_blocking=True
-            )
+        model._structure_encoder = model._structure_encoder.to(
+            self.device, non_blocking=True
+        )
+        model._structure_decoder = model._structure_decoder.to("cpu", non_blocking=True)
+        model._function_decoder = model._function_decoder.to("cpu", non_blocking=True)
 
         return model._structure_encoder
 
     def get_structure_decoder(self, model: ESM3) -> StructureTokenDecoder:
         """Return the decoder section of the structure variational autoencoder."""
 
-        if self.cpu_offloading:
-            model._structure_encoder = model._structure_encoder.to(
-                "cpu", non_blocking=True
-            )
-            model._structure_decoder = model._structure_decoder.to(
-                self.device, non_blocking=True
-            )
-            model._function_decoder = model._function_decoder.to(
-                "cpu", non_blocking=True
-            )
+        model._structure_encoder = model._structure_encoder.to("cpu", non_blocking=True)
+        model._structure_decoder = model._structure_decoder.to(
+            self.device, non_blocking=True
+        )
+        model._function_decoder = model._function_decoder.to("cpu", non_blocking=True)
 
         return model._structure_decoder
 
     def get_function_decoder(self, model: ESM3) -> FunctionTokenDecoder:
-        """Return the function annotation decoder."""
+        """Return the function annotation token decoder."""
 
-        if self.cpu_offloading:
-            model._structure_encoder = model._structure_encoder.to(
-                "cpu", non_blocking=True
-            )
-            model._structure_decoder = model._structure_decoder.to(
-                "cpu", non_blocking=True
-            )
-            model._function_decoder = model._function_decoder.to(
-                self.device, non_blocking=True
-            )
+        model._structure_encoder = model._structure_encoder.to("cpu", non_blocking=True)
+        model._structure_decoder = model._structure_decoder.to("cpu", non_blocking=True)
+        model._function_decoder = model._function_decoder.to(
+            self.device, non_blocking=True
+        )
 
         return model._function_decoder
 
