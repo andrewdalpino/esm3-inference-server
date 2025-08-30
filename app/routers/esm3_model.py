@@ -2,10 +2,26 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from enum import Enum
+
 from fastapi import APIRouter, Request
 
 from esm.sdk.api import ESMProtein, GenerationConfig, ESMProteinError
 from esm.utils.types import FunctionAnnotation
+
+
+class Schedule(str, Enum):
+    """The sampling schedule to use when determining the number of tokens to unmask per step."""
+
+    linear = "linear"
+    cosine = "cosine"
+
+
+class Strategy(str, Enum):
+    """The sampling strategy to use when generating tokens."""
+
+    random = "random"
+    entropy = "entropy"
 
 
 class GenerateRequest(BaseModel):
@@ -32,20 +48,40 @@ class GenerateRequest(BaseModel):
     )
 
     num_steps: int = Field(
+        description="The number of sampling steps used to generate the sequence.",
         default=20,
         ge=1,
-        description="The number of sampling steps used to generate the sequence.",
+    )
+
+    schedule: Schedule = Field(
+        description="The sampling schedule used to determine the number of tokens to unmask per step.",
+        default=Schedule.cosine,
+    )
+
+    strategy: Strategy = Field(
+        description="The sampling strategy used when generating tokens.",
+        default=Strategy.random,
     )
 
     temperature: float = Field(
-        default=1.0, gt=0.0, description="The temperature used for sampling."
+        description="The temperature used for sampling.", default=1.0, gt=0.0
+    )
+
+    temperature_annealing: bool = Field(
+        description="Should we anneal the temperature at each step?",
+        default=True,
     )
 
     top_p: float = Field(
+        description="The top probability value used for nucleus sampling.",
         default=1.0,
         ge=0.0,
         le=1.0,
-        description="The top p value used for nucleus sampling.",
+    )
+
+    condition_on_coordinates_only: bool = Field(
+        description="Should we only condition on the coordinates when generating the sequence?",
+        default=True,
     )
 
 
@@ -127,7 +163,7 @@ router = APIRouter(prefix="/model")
 
 
 @router.get("/", response_model=ModelInfoResponse)
-async def model_info(request: Request) -> ModelInfoResponse:
+def model_info(request: Request) -> ModelInfoResponse:
     model = request.app.state.model
 
     return ModelInfoResponse(
@@ -138,7 +174,7 @@ async def model_info(request: Request) -> ModelInfoResponse:
 
 
 @router.post("/generate/sequence", response_model=GenerateSequenceResponse)
-async def generate_sequence(
+def generate_sequence(
     request: Request, input: GenerateSequenceRequest
 ) -> GenerateSequenceResponse:
     function_annotations = (
@@ -162,8 +198,12 @@ async def generate_sequence(
     config = GenerationConfig(
         track="sequence",
         num_steps=input.num_steps,
+        schedule=input.schedule,
+        strategy=input.strategy,
         temperature=input.temperature,
+        temperature_annealing=input.temperature_annealing,
         top_p=input.top_p,
+        condition_on_coordinates_only=input.condition_on_coordinates_only,
     )
 
     protein = request.app.state.model.generate(protein, config)
@@ -177,7 +217,7 @@ async def generate_sequence(
 
 
 @router.post("/generate/structure", response_model=GenerateStructureResponse)
-async def generate_structure(
+def generate_structure(
     request: Request, input: GenerateStructureRequest
 ) -> GenerateStructureResponse:
     function_annotations = (
@@ -201,8 +241,12 @@ async def generate_structure(
     config = GenerationConfig(
         track="structure",
         num_steps=input.num_steps,
+        schedule=input.schedule,
+        strategy=input.strategy,
         temperature=input.temperature,
+        temperature_annealing=input.temperature_annealing,
         top_p=input.top_p,
+        condition_on_coordinates_only=input.condition_on_coordinates_only,
     )
 
     protein = request.app.state.model.generate(protein, config)
@@ -225,7 +269,7 @@ async def generate_structure(
 @router.post(
     "/generate/function_annotations", response_model=GenerateFunctionAnnotationsResponse
 )
-async def generate_function_annotations(
+def generate_function_annotations(
     request: Request, input: GenerateFunctionAnnotationsRequest
 ) -> GenerateFunctionAnnotationsResponse:
     function_annotations = (
@@ -249,8 +293,12 @@ async def generate_function_annotations(
     config = GenerationConfig(
         track="function",
         num_steps=input.num_steps,
+        schedule=input.schedule,
+        strategy=input.strategy,
         temperature=input.temperature,
+        temperature_annealing=input.temperature_annealing,
         top_p=input.top_p,
+        condition_on_coordinates_only=input.condition_on_coordinates_only,
     )
 
     protein = request.app.state.model.generate(protein, config)
@@ -279,7 +327,7 @@ async def generate_function_annotations(
 @router.post(
     "/generate/secondary_structure", response_model=GenerateSecondaryStructureResponse
 )
-async def generate_secondary_structure(
+def generate_secondary_structure(
     request: Request, input: GenerateSecondaryStructureRequest
 ) -> GenerateSecondaryStructureResponse:
     function_annotations = (
@@ -303,8 +351,12 @@ async def generate_secondary_structure(
     config = GenerationConfig(
         track="secondary_structure",
         num_steps=input.num_steps,
+        schedule=input.schedule,
+        strategy=input.strategy,
         temperature=input.temperature,
+        temperature_annealing=input.temperature_annealing,
         top_p=input.top_p,
+        condition_on_coordinates_only=input.condition_on_coordinates_only,
     )
 
     protein = request.app.state.model.generate(protein, config)
@@ -318,7 +370,7 @@ async def generate_secondary_structure(
 
 
 @router.post("/generate/sasa", response_model=GenerateSASAResponse)
-async def generate_secondary_structure(
+def generate_secondary_structure(
     request: Request, input: GenerateSASARequest
 ) -> GenerateSASAResponse:
     function_annotations = (
@@ -342,8 +394,12 @@ async def generate_secondary_structure(
     config = GenerationConfig(
         track="sasa",
         num_steps=input.num_steps,
+        schedule=input.schedule,
+        strategy=input.strategy,
         temperature=input.temperature,
+        temperature_annealing=input.temperature_annealing,
         top_p=input.top_p,
+        condition_on_coordinates_only=input.condition_on_coordinates_only,
     )
 
     protein = request.app.state.model.generate(protein, config)
@@ -351,11 +407,4 @@ async def generate_secondary_structure(
     if isinstance(protein, ESMProteinError):
         raise ValueError(f"Error generating sequence: {protein.error_msg}")
 
-    plddt = protein.plddt.tolist() if protein.plddt is not None else None
-    ptm = protein.ptm.item() if protein.ptm is not None else None
-
-    return GenerateSASAResponse(
-        sasa=protein.sasa,
-        plddt=plddt,
-        ptm=ptm,
-    )
+    return GenerateSASAResponse(sasa=protein.sasa)

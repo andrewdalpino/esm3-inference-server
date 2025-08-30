@@ -13,16 +13,26 @@ from esm.sdk.api import ESMProtein, GenerationConfig
 from esm.models.vqvae import StructureTokenDecoder, StructureTokenEncoder
 from esm.models.function_decoder import FunctionTokenDecoder
 
+from asyncio import Semaphore
+
 
 class ESM3Model:
     AVAILABLE_MODELS = {"esm3-open"}
 
-    def __init__(self, name: str, quantize: bool, device: str, cpu_offloading: bool):
+    def __init__(
+        self,
+        name: str,
+        quantize: bool,
+        device: str,
+        max_concurrency: int,
+        cpu_offloading: bool,
+    ):
         """
         Args:
             name (str): The name of the pretrained ESM3 model to load.
             quantize (bool): Whether to quantize the model weights to int8.
             device (str): The device to load the model on.
+            max_concurrency (int): The maximum number of concurrent generations.
             cpu_offloading (bool): Whether to offload parts of the model to CPU when not in use.
         """
 
@@ -40,6 +50,9 @@ class ESM3Model:
 
         if "mps" in device and not mps_is_available():
             raise ValueError("MPS is not supported on this device.")
+
+        if max_concurrency < 1:
+            raise ValueError("Max concurrency must be at least 1.")
 
         model = ESM3.from_pretrained(name, device=torch.device("cpu"))
 
@@ -75,11 +88,14 @@ class ESM3Model:
         else:
             model = model.to(device)
 
+        limiter = Semaphore(max_concurrency)
+
         model.eval()
 
         self.name = name
         self.model = model
         self.device = device
+        self.limiter = limiter
 
     @property
     def num_parameters(self) -> int:
@@ -120,8 +136,9 @@ class ESM3Model:
 
         return model._function_decoder
 
-    @torch.no_grad()
+    @torch.inference_mode()
     def generate(self, protein: ESMProtein, config: GenerationConfig) -> ESMProtein:
         """Generate tokens for the given protein and configuration."""
 
-        return self.model.generate(protein, config)
+        with self.limiter:
+            return self.model.generate(protein, config)

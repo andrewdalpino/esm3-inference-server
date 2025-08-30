@@ -1,5 +1,9 @@
 from os import environ
 
+from contextlib import asynccontextmanager
+
+from concurrent.futures import ProcessPoolExecutor
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -20,20 +24,28 @@ api_token = environ.get("API_TOKEN", "")
 model_name = environ.get("MODEL_NAME", "esm3-open")
 quantize = environ.get("QUANTIZE", "false").lower() == "true"
 device = environ.get("DEVICE", "cpu")
+max_concurrency = int(environ.get("MAX_CONCURRENCY", "1"))
 cpu_offloading = environ.get("CPU_OFFLOADING", "false").lower() == "true"
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # The ESM3 model requires a license agreement.
+    hf_login(token=hf_token)
+
+    model = ESM3Model(model_name, quantize, device, max_concurrency, cpu_offloading)
+
+    app.state.model = model
+
+    yield
+
 
 app = FastAPI(
     title="ESM3 Inference Server",
     description="ESM3 evolutionary protein modelling inference server.",
     version="0.0.10",
+    lifespan=lifespan,
 )
-
-# The ESM3 model requires a license agreement.
-hf_login(token=hf_token)
-
-model = ESM3Model(model_name, quantize, device, cpu_offloading)
-
-app.state.model = model
 
 app.add_middleware(ExceptionHandler)
 
