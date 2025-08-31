@@ -1,7 +1,6 @@
 # 0.0.10
 
-- Preload the model heads so full model can be quantized.
-- Implement CPU offloading of optional network components.
+- Preload the optional networks so full model can be quantized.
 - Add max concurrency for model inference.
 - Additional generation settings, schedule, strategy, annealing, etc.
 

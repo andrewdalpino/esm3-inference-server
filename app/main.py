@@ -2,8 +2,6 @@ from os import environ
 
 from contextlib import asynccontextmanager
 
-from concurrent.futures import ProcessPoolExecutor
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -22,10 +20,9 @@ import uvicorn
 hf_token = environ.get("HF_TOKEN", "")
 api_token = environ.get("API_TOKEN", "")
 model_name = environ.get("MODEL_NAME", "esm3-open")
+device = environ.get("DEVICE", "cuda")
 quantize = environ.get("QUANTIZE", "false").lower() == "true"
-device = environ.get("DEVICE", "cpu")
 max_concurrency = int(environ.get("MAX_CONCURRENCY", "1"))
-cpu_offloading = environ.get("CPU_OFFLOADING", "false").lower() == "true"
 
 
 @asynccontextmanager
@@ -33,7 +30,7 @@ async def lifespan(app: FastAPI):
     # The ESM3 model requires a license agreement.
     hf_login(token=hf_token)
 
-    model = ESM3Model(model_name, quantize, device, max_concurrency, cpu_offloading)
+    model = ESM3Model(model_name, device, quantize, max_concurrency)
 
     app.state.model = model
 
