@@ -20,7 +20,7 @@ import uvicorn
 hf_token = environ.get("HF_TOKEN", "")
 api_token = environ.get("API_TOKEN", "")
 model_name = environ.get("MODEL_NAME", "esm3-open")
-device = environ.get("DEVICE", "cuda")
+device = environ.get("DEVICE", "cpu")
 quantize = environ.get("QUANTIZE", "false").lower() == "true"
 max_concurrency = int(environ.get("MAX_CONCURRENCY", "1"))
 
