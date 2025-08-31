@@ -1,3 +1,7 @@
+# 0.0.11
+
+- Add quantize and max_concurrency to model info.
+
 # 0.0.10
 
 - Preload the optional networks so full model can be quantized.

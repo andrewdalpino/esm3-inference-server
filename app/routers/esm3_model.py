@@ -10,6 +10,28 @@ from esm.sdk.api import ESMProtein, GenerationConfig, ESMProteinError
 from esm.utils.types import FunctionAnnotation
 
 
+class ModelInfoResponse(BaseModel):
+    name: str = Field(
+        description="The name of the ESM3 model variant.",
+    )
+
+    num_parameters: int = Field(
+        description="The number of parameters in the model.",
+    )
+
+    device: str = Field(
+        description="The device the model is running on.",
+    )
+
+    quantize: bool = Field(
+        description="Whether the model weights are quantized to Int8.",
+    )
+
+    max_concurrency: int = Field(
+        description="The maximum number of concurrent generations.",
+    )
+
+
 class Schedule(str, Enum):
     """The sampling schedule to use when determining the number of tokens to unmask per step."""
 
@@ -105,20 +127,6 @@ class GenerateSASARequest(GenerateRequest):
     pass
 
 
-class ModelInfoResponse(BaseModel):
-    model_name: str = Field(
-        description="The name of the ESM3 model.",
-    )
-
-    num_parameters: int = Field(
-        description="The number of parameters in the model.",
-    )
-
-    device: str = Field(
-        description="The device the model is running on.",
-    )
-
-
 class GenerateSequenceResponse(BaseModel):
     sequence: str = Field(
         description="An amino acid protein sequence.",
@@ -167,9 +175,11 @@ def model_info(request: Request) -> ModelInfoResponse:
     model = request.app.state.model
 
     return ModelInfoResponse(
-        model_name=model.name,
+        name=model.name,
         num_parameters=model.num_parameters,
         device=model.device,
+        quantize=model.quantize,
+        max_concurrency=model.max_concurrency,
     )
 
 

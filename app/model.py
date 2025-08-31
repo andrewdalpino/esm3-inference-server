@@ -65,6 +65,8 @@ class ESM3Model:
         self.name = name
         self.model = model
         self.device = device
+        self.quantize = quantize
+        self.max_concurrency = max_concurrency
         self.limiter = limiter
 
     @property
