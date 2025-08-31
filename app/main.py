@@ -17,6 +17,12 @@ from huggingface_hub import login as hf_login
 import uvicorn
 
 
+TITLE = "ESM3 Inference Server"
+
+DESCRIPTION = "ESM3 evolutionary protein modelling inference server."
+
+VERSION = "0.0.11"
+
 hf_token = environ.get("HF_TOKEN", "")
 api_token = environ.get("API_TOKEN", "")
 model_name = environ.get("MODEL_NAME", "esm3-open")
@@ -38,9 +44,9 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="ESM3 Inference Server",
-    description="ESM3 evolutionary protein modelling inference server.",
-    version="0.0.10",
+    title=TITLE,
+    description=DESCRIPTION,
+    version=VERSION,
     lifespan=lifespan,
 )
 
