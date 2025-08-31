@@ -58,9 +58,9 @@ class ESM3Model:
 
         model = model.to(device)
 
-        limiter = Semaphore(max_concurrency)
-
         model.eval()
+
+        limiter = Semaphore(max_concurrency)
 
         self.name = name
         self.model = model
