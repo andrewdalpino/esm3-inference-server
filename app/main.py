@@ -5,10 +5,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import esm3_model
 from middleware import ExceptionHandler, TokenAuthentication, ResponseTime
 
-from routers import health
+from routers import info, generate, health
 
 from model import ESM3Model
 
@@ -21,7 +20,7 @@ TITLE = "ESM3 Inference Server"
 
 DESCRIPTION = "ESM3 evolutionary protein modelling inference server."
 
-VERSION = "0.0.11"
+VERSION = "0.0.12"
 
 hf_token = environ.get("HF_TOKEN", "")
 api_token = environ.get("API_TOKEN", "")
@@ -65,7 +64,8 @@ if api_token:
 
 app.add_middleware(ResponseTime)
 
-app.include_router(esm3_model.router)
+app.include_router(info.router)
+app.include_router(generate.router)
 app.include_router(health.router)
 
 

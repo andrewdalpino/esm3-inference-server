@@ -1,3 +1,7 @@
+# 0.0.12
+
+- Add PDB function annotation generation endpoint.
+
 # 0.0.11
 
 - Add quantize and max_concurrency to model info.
