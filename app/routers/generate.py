@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Self
 
 from pydantic import BaseModel, Field
 
@@ -145,6 +145,10 @@ class GenerateSequenceResponse(BaseModel):
         description="The generated amino acid protein sequence.",
     )
 
+    @classmethod
+    def from_protein(cls, protein: ESMProtein) -> Self:
+        return cls(sequence=protein.sequence)
+
 
 class GenerateStructureResponse(BaseModel):
     pdb: str = Field(
@@ -159,11 +163,13 @@ class GenerateStructureResponse(BaseModel):
         description="The predicted template modeling (PTM) scores for the sequence.",
     )
 
-
-class GenerateFunctionAnnotationsResponse(BaseModel):
-    function_annotations: list[dict[str, Any]] = Field(
-        description="InterPro function annotations for the sequence.",
-    )
+    @classmethod
+    def from_protein(cls, protein: ESMProtein) -> Self:
+        return cls(
+            pdb=protein.to_pdb_string(),
+            plddt=protein.plddt.tolist(),
+            ptm=protein.ptm.item(),
+        )
 
 
 class GenerateSecondaryStructureResponse(BaseModel):
@@ -171,11 +177,42 @@ class GenerateSecondaryStructureResponse(BaseModel):
         description="The secondary structure of the sequence.",
     )
 
+    @classmethod
+    def from_protein(cls, protein: ESMProtein) -> Self:
+        return cls(secondary_structure=protein.secondary_structure)
+
 
 class GenerateSASAResponse(BaseModel):
     sasa: list[float | None] = Field(
         description="The solvent accessible surface area (SASA) of the sequence.",
     )
+
+    @classmethod
+    def from_protein(cls, protein: ESMProtein) -> Self:
+        return cls(sasa=protein.sasa)
+
+
+class GenerateFunctionAnnotationsResponse(BaseModel):
+    function_annotations: list[dict[str, Any]] = Field(
+        description="InterPro function annotations for the sequence.",
+    )
+
+    @classmethod
+    def from_protein(cls, protein: ESMProtein) -> Self:
+        function_annotations = (
+            [
+                {
+                    "label": annotation.label,
+                    "start": annotation.start,
+                    "end": annotation.end,
+                }
+                for annotation in protein.function_annotations
+            ]
+            if protein.function_annotations is not None
+            else []
+        )
+
+        return cls(function_annotations=function_annotations)
 
 
 class PDBGenerateRequest(GenerateSettings):
@@ -238,9 +275,7 @@ def generate_sequence(
     if isinstance(protein, ESMProteinError):
         raise ValueError(f"Error generating sequence: {protein.error_msg}")
 
-    return GenerateSequenceResponse(
-        sequence=protein.sequence,
-    )
+    return GenerateSequenceResponse.from_protein(protein)
 
 
 @router.post("/generate/structure", response_model=GenerateStructureResponse)
@@ -256,11 +291,7 @@ def generate_structure(
     if isinstance(protein, ESMProteinError):
         raise ValueError(f"Error generating sequence: {protein.error_msg}")
 
-    return GenerateStructureResponse(
-        pdb=protein.to_pdb_string(),
-        plddt=protein.plddt.tolist(),
-        ptm=protein.ptm.item(),
-    )
+    return GenerateStructureResponse.from_protein(protein)
 
 
 @router.post(
@@ -278,22 +309,7 @@ def generate_function_annotations(
     if isinstance(protein, ESMProteinError):
         raise ValueError(f"Error generating sequence: {protein.error_msg}")
 
-    function_annotations = (
-        [
-            {
-                "label": annotation.label,
-                "start": annotation.start,
-                "end": annotation.end,
-            }
-            for annotation in protein.function_annotations
-        ]
-        if protein.function_annotations is not None
-        else []
-    )
-
-    return GenerateFunctionAnnotationsResponse(
-        function_annotations=function_annotations,
-    )
+    return GenerateFunctionAnnotationsResponse.from_protein(protein)
 
 
 @router.post(
@@ -311,9 +327,7 @@ def generate_secondary_structure(
     if isinstance(protein, ESMProteinError):
         raise ValueError(f"Error generating sequence: {protein.error_msg}")
 
-    return GenerateSecondaryStructureResponse(
-        secondary_structure=protein.secondary_structure,
-    )
+    return GenerateSecondaryStructureResponse.from_protein(protein)
 
 
 @router.post("/generate/sasa", response_model=GenerateSASAResponse)
@@ -329,7 +343,7 @@ def generate_secondary_structure(
     if isinstance(protein, ESMProteinError):
         raise ValueError(f"Error generating sequence: {protein.error_msg}")
 
-    return GenerateSASAResponse(sasa=protein.sasa)
+    return GenerateSASAResponse.from_protein(protein)
 
 
 @router.post(
@@ -348,19 +362,4 @@ def pdb_generate_function_annotations(
     if isinstance(protein, ESMProteinError):
         raise ValueError(f"Error generating sequence: {protein.error_msg}")
 
-    function_annotations = (
-        [
-            {
-                "label": annotation.label,
-                "start": annotation.start,
-                "end": annotation.end,
-            }
-            for annotation in protein.function_annotations
-        ]
-        if protein.function_annotations is not None
-        else []
-    )
-
-    return GenerateFunctionAnnotationsResponse(
-        function_annotations=function_annotations,
-    )
+    return GenerateFunctionAnnotationsResponse.from_protein(protein)
