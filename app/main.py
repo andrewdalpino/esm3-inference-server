@@ -20,7 +20,7 @@ TITLE = "ESM3 Inference Server"
 
 DESCRIPTION = "ESM3 evolutionary protein modelling inference server."
 
-VERSION = "0.0.12"
+VERSION = "0.1.0"
 
 hf_token = environ.get("HF_TOKEN", "")
 api_token = environ.get("API_TOKEN", "")
