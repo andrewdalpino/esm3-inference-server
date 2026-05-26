@@ -20,13 +20,14 @@ TITLE = "ESM3 Inference Server"
 
 DESCRIPTION = "ESM3 evolutionary protein modelling inference server."
 
-VERSION = "0.1.0"
+VERSION = "0.1.1"
 
 hf_token = environ.get("HF_TOKEN", "")
 api_token = environ.get("API_TOKEN", "")
 model_name = environ.get("MODEL_NAME", "esm3-open")
 device = environ.get("DEVICE", "cpu")
 quantize = environ.get("QUANTIZE", "false").lower() == "true"
+quant_group_size = int(environ.get("QUANT_GROUP_SIZE", "192"))
 max_concurrency = int(environ.get("MAX_CONCURRENCY", "1"))
 
 
@@ -35,7 +36,7 @@ async def lifespan(app: FastAPI):
     # The ESM3 model requires a license agreement.
     hf_login(token=hf_token)
 
-    model = ESM3Model(model_name, device, quantize, max_concurrency)
+    model = ESM3Model(model_name, device, quantize, quant_group_size, max_concurrency)
 
     app.state.model = model
 

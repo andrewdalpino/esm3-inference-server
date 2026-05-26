@@ -19,13 +19,15 @@ class ESM3Model:
         name: str,
         device: str,
         quantize: bool,
+        quant_group_size: int,
         max_concurrency: int,
     ):
         """
         Args:
             name (str): The name of the pretrained ESM3 model to load.
-            quantize (bool): Whether to quantize the model weights to int8.
             device (str): The device to load the model on.
+            quantize (bool): Whether to quantize the model weights to int8.
+            quant_group_size (int): The group size for quantization.
             max_concurrency (int): The maximum number of concurrent generations.
         """
 
@@ -46,15 +48,18 @@ class ESM3Model:
 
         model = ESM3.from_pretrained(name, device=torch.device("cpu"))
 
-        # Preload additional encoder/decoder networks.
+        # Preload auxillary encoder/decoder networks.
         model.get_structure_encoder()
         model.get_structure_decoder()
         model.get_function_decoder()
 
-        model = torch.compile(model)
-
         if quantize:
-            quantize_(model, Int8WeightOnlyConfig())
+            config = Int8WeightOnlyConfig(group_size=quant_group_size)
+
+            quantize_(model, config)
+
+        else:
+            model = model.to(dtype=torch.float16)
 
         model = model.to(device)
 
@@ -66,6 +71,7 @@ class ESM3Model:
         self.model = model
         self.device = device
         self.quantize = quantize
+        self.quant_group_size = quant_group_size
         self.max_concurrency = max_concurrency
         self.limiter = limiter
 
