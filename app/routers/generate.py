@@ -331,7 +331,7 @@ def generate_secondary_structure(
 
 
 @router.post("/generate/sasa", response_model=GenerateSASAResponse)
-def generate_secondary_structure(
+def generate_sasa(
     request: Request, input: GenerateSASARequest
 ) -> GenerateSASAResponse:
     protein = input.to_protein()
