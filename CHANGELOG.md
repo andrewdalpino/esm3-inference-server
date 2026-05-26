@@ -2,6 +2,7 @@
 
 ## 0.1.1
 
+- Add PDB to sequence endpoint.
 - Add quantization group size.
 
 ## 0.0.12

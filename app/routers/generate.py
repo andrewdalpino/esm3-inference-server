@@ -254,6 +254,8 @@ class PDBGenerateRequest(GenerateSettings):
             protein_chain, with_annotations=self.with_annotations
         )
 
+class PDBGenerateSequenceRequest(PDBGenerateRequest):
+    pass
 
 class PDBGenerateFunctionAnnotationsRequest(PDBGenerateRequest):
     pass
@@ -345,6 +347,24 @@ def generate_sasa(
 
     return GenerateSASAResponse.from_protein(protein)
 
+
+@router.post(
+    "/pdb/generate/sequence", response_model=GenerateSequenceResponse,
+)
+def pdb_generate_sequence(
+    request: Request, input: PDBGenerateSequenceRequest
+) -> GenerateSequenceResponse:
+    protein = input.to_protein()
+
+    config = input.to_config(track="sequence")
+
+    protein = request.app.state.model.generate(protein, config)
+
+    if isinstance(protein, ESMProteinError):
+        raise ValueError(f"Error generating sequence: {protein.error_msg}")
+
+    return GenerateSequenceResponse.from_protein(protein)
+    
 
 @router.post(
     "/pdb/generate/function_annotations",

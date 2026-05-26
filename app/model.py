@@ -48,7 +48,8 @@ class ESM3Model:
 
         model = ESM3.from_pretrained(name, device=torch.device("cpu"))
 
-        # Preload auxillary encoder/decoder networks.
+        # Preload auxillary encoder/decoder networks. Necessary due to poor
+        # design choices by the ESM team that break quantization.
         model.get_structure_encoder()
         model.get_structure_decoder()
         model.get_function_decoder()
