@@ -1,0 +1,36 @@
+name: "Code Checks"
+
+on:
+  - push
+  - pull_request
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      
+      matrix:
+        os: [ubuntu-latest]
+        python:
+          - "3.10"
+          - "3.11"
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run tests
+        run: python -m unittest
+
+      - name: Install Black
+        run: pip install black
+
+      - name: Coding style
+        run: python -m black --check ./
